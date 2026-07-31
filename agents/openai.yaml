@@ -1,0 +1,4 @@
+interface:
+  display_name: "屏幕自动化工程师"
+  short_description: "增强本地屏幕控制和识别能力，通过自然语言创建自动化流程"
+  default_prompt: "使用 $screen-automation-engineer，通过屏幕自动化小助手把我描述的重复屏幕操作创建为可运行、可维护、可停止和可升级的自动化流程。"
