@@ -1,16 +1,62 @@
 ﻿param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("status", "capabilities", "target", "list", "show", "prepare-update", "inspect", "validate", "install", "remove", "start", "latest", "debug", "next", "stop")]
+    [ValidateSet("status", "capabilities", "health", "connectors", "android-devices", "runs", "pause-run", "resume-run", "stop-run", "target", "task-begin", "task-status", "task-refresh", "task-restore", "task-activate", "task-ensure-visible", "task-move", "task-resize", "window-arrange", "task-observe", "task-find", "task-wait", "task-click", "task-long-press", "task-drag", "task-scroll", "task-write", "task-hotkey", "task-end", "list", "show", "prepare-update", "inspect", "validate", "install", "remove", "start", "latest", "debug", "next", "stop", "experience-create", "experience-list", "experience-show", "experience-note", "demonstrate-start", "demonstrate-status", "demonstrate-pause", "demonstrate-resume", "demonstrate-stop", "demonstrate-export")]
     [string]$Action,
     [string]$Target,
     [string]$Executable,
     [string]$DevelopmentRoot = (Join-Path ([Environment]::GetFolderPath("MyDocuments")) "屏幕自动化小助手\流程开发"),
     [int]$Count,
     [int]$Limit = 10,
-    [double]$Timeout = 30
+    [double]$Timeout = 30,
+    [switch]$NoScreen,
+    [string]$Name,
+    [string]$Project,
+    [string]$Goal,
+    [string]$ExpectedResult,
+    [string]$Forbidden,
+    [ValidateSet("normal", "exception", "boundary", "supplement")]
+    [string]$FragmentType = "normal",
+    [string]$Purpose,
+    [ValidateSet("rule", "exception", "success", "variable", "constraint", "context")]
+    [string]$Kind = "context",
+    [string]$Message,
+    [int]$Handle,
+    [int[]]$Handles,
+    [string]$Process,
+    [string]$Text,
+    [string]$Point,
+    [string]$End,
+    [ValidateSet("left", "right", "middle")][string]$Button = "left",
+    [int]$Amount,
+    [double]$Interval = 0,
+    [double]$Duration = 1.0,
+    [string[]]$Keys,
+    [int]$X,
+    [int]$Y,
+    [int]$Width,
+    [int]$Height,
+    [ValidateSet("grid", "columns", "rows", "two-by-two")][string]$Layout = "grid",
+    [string]$Monitor
 )
 
 $ErrorActionPreference = "Stop"
+
+$isMacOS = $false
+try {
+    if (Get-Variable IsMacOS -ErrorAction SilentlyContinue) {
+        $isMacOS = [bool]$IsMacOS
+    } elseif ($PSVersionTable.PSEdition -eq "Core") {
+        $isMacOS = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform(
+            [System.Runtime.InteropServices.OSPlatform]::OSX
+        )
+    }
+} catch {
+    $isMacOS = $false
+}
+if ($isMacOS) {
+    Write-Output '{"ok": false, "platform": "macos", "error": "本机是 macOS：请使用 Skill 包内的 workflow_dev.sh，不要执行 Windows 版 workflow_dev.ps1。"}'
+    exit 2
+}
 
 function Resolve-HelperExecutable {
     param([string]$RequestedPath)
@@ -86,12 +132,121 @@ switch ($Action) {
         } | ConvertTo-Json -Depth 12
     }
     "capabilities" { & $resolvedExecutable cli capabilities }
+    "connectors" { & $resolvedExecutable cli connectors list }
+    "android-devices" { & $resolvedExecutable cli connectors discover android-screen }
+    "runs" { & $resolvedExecutable cli runs list }
+    "pause-run" { & $resolvedExecutable cli pause --run-id $Target }
+    "resume-run" { & $resolvedExecutable cli resume --run-id $Target }
+    "stop-run" { & $resolvedExecutable cli stop --run-id $Target }
+    "health" {
+        $healthArgs = @("cli", "health")
+        if (-not [string]::IsNullOrWhiteSpace($Target)) {
+            $healthArgs += @("--workflow", $Target)
+        }
+        if ($NoScreen) {
+            $healthArgs += "--no-screen"
+        }
+        & $resolvedExecutable @healthArgs
+    }
+    "experience-create" {
+        if ([string]::IsNullOrWhiteSpace($Name)) { throw "操作 $Action 需要提供 -Name。" }
+        $experienceArgs = @("cli", "experience", "create", "--name", $Name)
+        if (-not [string]::IsNullOrWhiteSpace($Goal)) { $experienceArgs += @("--goal", $Goal) }
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedResult)) { $experienceArgs += @("--expected-result", $ExpectedResult) }
+        if (-not [string]::IsNullOrWhiteSpace($Forbidden)) { $experienceArgs += @("--forbidden", $Forbidden) }
+        & $resolvedExecutable @experienceArgs
+    }
+    "experience-list" { & $resolvedExecutable cli experience list }
+    "experience-show" {
+        Require-Target -Value $Project -ActionName $Action
+        & $resolvedExecutable cli experience show $Project
+    }
+    "experience-note" {
+        Require-Target -Value $Project -ActionName $Action
+        if ([string]::IsNullOrWhiteSpace($Message)) { throw "操作 $Action 需要提供 -Message。" }
+        & $resolvedExecutable cli experience note $Project --kind $Kind --message $Message
+    }
+    "demonstrate-start" {
+        Require-Target -Value $Project -ActionName $Action
+        $demonstrateArgs = @("cli", "recording", "start", "--project", $Project, "--fragment-type", $FragmentType)
+        if (-not [string]::IsNullOrWhiteSpace($Purpose)) { $demonstrateArgs += @("--purpose", $Purpose) }
+        & $resolvedExecutable @demonstrateArgs
+    }
+    "demonstrate-status" { & $resolvedExecutable cli recording status }
+    "demonstrate-pause" { & $resolvedExecutable cli recording pause }
+    "demonstrate-resume" { & $resolvedExecutable cli recording resume }
+    "demonstrate-stop" { & $resolvedExecutable cli recording stop }
+    "demonstrate-export" {
+        Require-Target -Value $Target -ActionName $Action
+        & $resolvedExecutable cli recording export $Target
+    }
     "target" {
         if ($Timeout -le 0) {
             throw "等待时间必须大于 0 秒。"
         }
         & $resolvedExecutable cli window wait-selection --timeout $Timeout
     }
+    "task-begin" {
+        $taskArgs = @("cli", "task", "begin")
+        if ($PSBoundParameters.ContainsKey("Handle")) { $taskArgs += @("--handle", $Handle) }
+        if (-not [string]::IsNullOrWhiteSpace($Target)) { $taskArgs += @("--title", $Target) }
+        if (-not [string]::IsNullOrWhiteSpace($Process)) { $taskArgs += @("--process", $Process) }
+        & $resolvedExecutable @taskArgs
+    }
+    "task-status" { & $resolvedExecutable cli task status }
+    "task-refresh" { & $resolvedExecutable cli window refresh }
+    "task-restore" { & $resolvedExecutable cli window restore }
+    "task-activate" { & $resolvedExecutable cli window activate }
+    "task-ensure-visible" { & $resolvedExecutable cli window ensure-visible }
+    "task-move" {
+        if (-not $PSBoundParameters.ContainsKey("X") -or -not $PSBoundParameters.ContainsKey("Y")) { throw "操作 $Action 需要提供 -X 和 -Y。" }
+        & $resolvedExecutable cli window move --x $X --y $Y
+    }
+    "task-resize" {
+        if (-not $PSBoundParameters.ContainsKey("Width") -or -not $PSBoundParameters.ContainsKey("Height")) { throw "操作 $Action 需要提供 -Width 和 -Height。" }
+        & $resolvedExecutable cli window resize --width $Width --height $Height
+    }
+    "window-arrange" {
+        if ($null -eq $Handles -or $Handles.Count -lt 2) { throw "操作 $Action 需要通过 -Handles 提供二至四个窗口句柄。" }
+        $arrangeArgs = @("cli", "window", "arrange", "--handles") + $Handles + @("--layout", $Layout)
+        if (-not [string]::IsNullOrWhiteSpace($Monitor)) { $arrangeArgs += @("--monitor", $Monitor) }
+        & $resolvedExecutable @arrangeArgs
+    }
+    "task-observe" { & $resolvedExecutable cli task observe }
+    "task-find" {
+        if ([string]::IsNullOrWhiteSpace($Text)) { throw "操作 $Action 需要提供 -Text。" }
+        & $resolvedExecutable cli task find --text $Text
+    }
+    "task-wait" {
+        if ([string]::IsNullOrWhiteSpace($Text)) { throw "操作 $Action 需要提供 -Text。" }
+        $waitInterval = if ($Interval -gt 0) { $Interval } else { 0.8 }
+        & $resolvedExecutable cli task wait --text $Text --timeout $Timeout --interval $waitInterval
+    }
+    "task-click" {
+        if ([string]::IsNullOrWhiteSpace($Point)) { throw "操作 $Action 需要提供 -Point。" }
+        & $resolvedExecutable cli task click --point $Point --button $Button
+    }
+    "task-long-press" {
+        if ([string]::IsNullOrWhiteSpace($Point)) { throw "操作 $Action 需要提供 -Point。" }
+        & $resolvedExecutable cli task long-press --point $Point --duration $Duration --button $Button
+    }
+    "task-drag" {
+        if ([string]::IsNullOrWhiteSpace($Point) -or [string]::IsNullOrWhiteSpace($End)) { throw "操作 $Action 需要提供 -Point 和 -End。" }
+        & $resolvedExecutable cli task drag --start $Point --end $End --duration $Duration --button $Button
+    }
+    "task-scroll" {
+        if ([string]::IsNullOrWhiteSpace($Point)) { throw "操作 $Action 需要提供 -Point。" }
+        & $resolvedExecutable cli task scroll --point $Point --amount $Amount
+    }
+    "task-write" {
+        if ($null -eq $Text) { throw "操作 $Action 需要提供 -Text。" }
+        & $resolvedExecutable cli task write --text $Text --interval $Interval
+    }
+    "task-hotkey" {
+        if ($null -eq $Keys -or $Keys.Count -eq 0) { throw "操作 $Action 需要提供 -Keys。" }
+        & $resolvedExecutable cli task hotkey @Keys
+    }
+    "task-end" { & $resolvedExecutable cli task end }
     "list" { & $resolvedExecutable cli workflow list }
     "show" {
         Require-Target -Value $Target -ActionName $Action
