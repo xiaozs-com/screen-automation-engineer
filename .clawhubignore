@@ -1,0 +1,5 @@
+# 发布物仅保留 Skill 运行时需要的说明、配置与脚本。
+.github/
+dist/
+tools/
+package_skillhub.ps1
