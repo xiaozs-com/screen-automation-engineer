@@ -3,7 +3,7 @@ name: 屏幕自动化工程师
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.6
+  version: 1.1.7
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
