@@ -41,6 +41,12 @@ jobs:
           if not re.fullmatch(r"v?\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?", version):
               raise SystemExit(f"metadata.version is not a SemVer version: {version}")
           version = version.removeprefix("v")
+          git_ref = os.environ.get("GITHUB_REF", "")
+          if git_ref.startswith("refs/tags/") and git_ref != f"refs/tags/v{version}":
+              raise SystemExit(
+                  f"Tag {git_ref.removeprefix('refs/tags/')} does not match "
+                  f"SKILL.md metadata.version {version}"
+              )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
               output.write(f"version={version}\\n")
 
