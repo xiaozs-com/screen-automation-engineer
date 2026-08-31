@@ -28,6 +28,7 @@
     [string]$End,
     [ValidateSet("left", "right", "middle")][string]$Button = "left",
     [int]$Amount,
+    [ValidateSet("up", "down", "left", "right")][string]$Direction,
     [double]$Interval = 0,
     [double]$Duration = 1.0,
     [string[]]$Keys,
@@ -236,7 +237,11 @@ switch ($Action) {
     }
     "task-scroll" {
         if ([string]::IsNullOrWhiteSpace($Point)) { throw "操作 $Action 需要提供 -Point。" }
-        & $resolvedExecutable cli task scroll --point $Point --amount $Amount
+        $scrollArguments = @("cli", "task", "scroll", "--point", $Point, "--amount", $Amount)
+        if (-not [string]::IsNullOrWhiteSpace($Direction)) {
+            $scrollArguments += @("--direction", $Direction)
+        }
+        & $resolvedExecutable @scrollArguments
     }
     "task-write" {
         if ($null -eq $Text) { throw "操作 $Action 需要提供 -Text。" }

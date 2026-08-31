@@ -3,7 +3,7 @@ name: 屏幕自动化工程师
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.7
+  version: 1.1.8
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
@@ -157,7 +157,7 @@ bash ./scripts/workflow_dev.sh task-begin --handle <已确认窗口句柄>
 bash ./scripts/workflow_dev.sh task-observe
 ```
 
-按需要使用 `task-find`、`task-wait`、`task-click`、`task-long-press`、`task-drag`、`task-scroll`、`task-write` 和 `task-hotkey`。每次改变界面后重新观察或等待明确状态，形成“观察—操作—验证”闭环。完成或放弃任务时执行：
+按需要使用 `task-find`、`task-wait`、`task-click`、`task-long-press`、`task-drag`、`task-scroll`、`task-write` 和 `task-hotkey`。`task-scroll` 是同一个滚动能力：`--direction up|down` 为纵向，`--direction left|right` 为横向；例如 Windows 使用 `-Action task-scroll -Point 700,700 -Amount 600 -Direction right`，macOS 使用 `bash ./scripts/workflow_dev.sh task-scroll --point 700,700 --amount 600 --direction right`。每次改变界面后重新观察或等待明确状态，形成“观察—操作—验证”闭环。完成或放弃任务时执行：
 
 ```powershell
 .\scripts\workflow_dev.ps1 -Action task-end
@@ -200,7 +200,7 @@ macOS 使用 `bash ./scripts/workflow_dev.sh task-end`。
 ## 自动化流程工程
 
 macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`，且以 `capabilities` 返回的能力
-为准；当前不支持任务级鼠标键盘动作，不要用 Windows 脚本或命令代替。
+为准；任务级鼠标键盘动作按同一 CLI 契约调用，不把 Windows 连接器能力假定为 macOS 能力。
 
 ### WorkBuddy 必须执行的开发流水线
 
