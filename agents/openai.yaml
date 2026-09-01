@@ -1,4 +1,4 @@
 interface:
   display_name: "屏幕自动化工程师"
   short_description: "增强本地屏幕控制和识别能力，通过自然语言创建自动化流程"
-  default_prompt: "使用 $screen-automation-engineer，先读取流程标准并检查小助手真实能力，再把我描述的重复屏幕操作创建为可读、可校验、可停止、可升级且经过监督验收的 workflow.md 流程包；复杂逻辑才使用受限 workflow.py。"
+  default_prompt: "使用 $screen-automation-engineer，先读取流程标准和 capabilities（包括四方向滚动），再把我描述的重复屏幕操作创建为可读、可校验、可停止、可升级且经过监督验收的 workflow.md 流程包；复杂逻辑才使用受限 workflow.py。"
