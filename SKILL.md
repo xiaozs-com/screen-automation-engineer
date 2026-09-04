@@ -1,6 +1,6 @@
 ---
 name: screen-automation-engineer
-version: 1.1.16
+version: 1.1.17
 display_name: 屏幕自动化工程师
 display_name_en: Screen Automation Engineer
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
@@ -8,7 +8,7 @@ description_zh: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视
 description_en: Enhances an agent with local screen control and visual recognition, and supports creating and maintaining automation workflows with Screen Automation Helper on Windows and macOS.
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.16
+  version: 1.1.17
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
@@ -125,9 +125,9 @@ APP_CLI="$(bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path)"
 授权。只有用户可读流程明确写出 `允许操作：屏幕操作` 时，Bridge 才能请求屏幕操作能力；省略时
 必须保持判断任务，不得让 Provider 自行推断授权。
 
-当前 DSH 插件尚未提供可验证的任务级工具过滤，真实 DSH Provider 会拒绝启用整组屏幕插件工具。
-遇到“任务级工具限制”错误时，说明当前版本只完成了授权协议，不能通过改提示词、环境变量或手工
-打开插件绕过。由某 Provider 启动的流程再次触发同一 Provider checkpoint 时会以
+`dsh-screen-automation` 0.1.6 源码已提供策略版本和精确白名单的执行时校验，但在兼容版本完成
+发布、安装和连接验证前，真实 DSH Provider 仍会拒绝启用整组屏幕插件工具。遇到“任务级工具限制”
+错误时，不能通过改提示词、环境变量或手工打开插件绕过。由某 Provider 启动的流程再次触发同一 Provider checkpoint 时会以
 `recursive_agent_call` 阻断；不得自动重试形成递归。
 
 首次连接、桌面端更新后或诊断异常时，执行一次平台健康检查：
