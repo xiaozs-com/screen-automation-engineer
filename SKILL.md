@@ -1,9 +1,14 @@
 ---
-name: 屏幕自动化工程师
+name: screen-automation-engineer
+version: 1.1.15
+display_name: 屏幕自动化工程师
+display_name_en: Screen Automation Engineer
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
+description_zh: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
+description_en: Enhances an agent with local screen control and visual recognition, and supports creating and maintaining automation workflows with Screen Automation Helper on Windows and macOS.
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.9
+  version: 1.1.15
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
@@ -34,21 +39,30 @@ metadata:
 
 ## 连接桌面平台
 
-任何屏幕操作、坐标判断或流程文件修改前，先使用当前 Skill 包内脚本检查真实环境：
+任何屏幕操作、坐标判断或流程文件修改前，先取得本机小助手的原生 CLI 路径：
 
 ```powershell
-& "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action status
+$AppCli = & "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action cli-path
+& $AppCli cli status
+```
+
+macOS 使用：
+
+```bash
+APP_CLI="$(bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path)"
+"$APP_CLI" cli status
 ```
 
 脚本按本机平台区分，先判断系统再选择：
 
-- Windows：使用 `scripts\workflow_dev.ps1`，调用方式为
-  `& "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action <动作>`。
-- macOS：使用 `scripts/workflow_dev.sh`，调用方式为
-  `bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" <动作>`。
+- Windows：`scripts\workflow_dev.ps1` 只用于定位 App 原生 CLI，及兼容已有的流程桥接动作。先运行
+  `-Action cli-path` 取得原生 CLI 路径；屏幕、窗口和任务动作一律调用 `& $AppCli cli <原生命令>`。
+- macOS：`scripts/workflow_dev.sh` 只用于定位 App 原生 CLI，及少数流程管理桥接动作。先运行
+  `bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path` 取得原生 CLI 路径；屏幕、窗口和
+  任务动作一律调用 `"<返回路径>" cli <原生命令>`。
 
-macOS 上不得执行 `workflow_dev.ps1`；后续示例中的 `workflow_dev.ps1` 只在 Windows 有效，
-macOS 一律替换为 `workflow_dev.sh`，并按脚本实际支持的动作执行。
+两个包装脚本都不是原生动作的完整封装；不得把未列出的动作传给它们，也不得依据其动作列表判断小助手
+不具备某项能力。
 
 不得猜测安装盘符，也不得递归扫描用户目录、`Program Files`、`/Applications` 或整个磁盘。检查脚本会先读取环境变量和当前系统实际用户目录；在 Windows 上可读取应用注册信息，在 macOS 上只使用已登记的应用位置与当前命令返回的能力，定位桌面端。
 
@@ -65,13 +79,14 @@ macOS 一律替换为 `workflow_dev.sh`，并按脚本实际支持的动作执�
 连接桌面平台后，使用当前 Skill 包内脚本读取实际能力：
 
 ```powershell
-& "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action capabilities
+& $AppCli cli capabilities
 ```
 
 macOS 使用：
 
 ```bash
-bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" capabilities
+APP_CLI="$(bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path)"
+"$APP_CLI" cli capabilities
 ```
 
 以当前安装版本返回的能力为准。不得依据模型印象、旧对话或 Skill 文档推断某项能力一定存在或不存在。
@@ -82,24 +97,39 @@ bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" capabilities
 `mouse.scroll` 的 SDK 与 CLI 声明；不得因为通用 Python 库缺少统一接口，就判断小助手没有
 横向滚动能力，也不得用 `Shift+滚轮` 代替原生横向滚动。
 
-- Windows：`-Action task-scroll -Point 700,700 -Amount 600 -Direction right`
-- macOS：`task-scroll --point 700,700 --amount 600 --direction right`
+- Windows：`& $AppCli cli task scroll --point 700,700 --amount 600 --direction right`
+- macOS：`"$APP_CLI" cli task scroll --point 700,700 --amount 600 --direction right`
 - Python SDK：`ctx.mouse.scroll((700, 700), 600, axis="horizontal")`
 
 方向可以写为 `up`、`down`、`left`、`right`。不传 `Direction` 时是纵向滚动，正值向上、
 负值向下；横向滚动正值向右、负值向左。事件发送成功只说明系统已经收到滚动动作，不代表
 目标控件一定发生位移；执行后必须重新观察，位于边界或目标不支持该方向时按 `no_change` 处理。
 
+### 浏览器增强能力速查
+
+浏览器是屏幕中的一种应用类型，浏览器增强只是定位、读取和操作的增强通道，不是第三种执行者。
+流程步骤仍由 `engine` 执行；不要创建或描述 `browser executor`。先用 `cli capabilities` 确认
+当前桌面端基础契约，再让用户在“小助手 → 设置 → 功能组件”确认浏览器增强已经安装。当前 CLI
+能力列表不代表可选组件安装状态，不能据此声称组件已安装。基础安装不包含该组件，Agent 不得
+静默安装或卸载。
+
+当前产品范围：Windows 支持小助手创建的独立 Chrome/Edge 受管会话，macOS 支持独立 Chrome
+受管会话；不接管用户日常浏览器 Profile，也不读取其 Cookie、历史记录或同步数据。流程按实际
+用途声明 `读取浏览器`、`操作浏览器`、`浏览器下载`、`管理浏览器会话` 权限，并声明
+`引擎能力：browser-enhancement@1`。浏览器协议返回成功不等于屏幕状态已经正确；改变页面后仍须
+验证可见结果。Windows 拒绝后台窗口抢前台时，先请用户把受管浏览器置于前台，不得绕过该限制。
+
 首次连接、桌面端更新后或诊断异常时，执行一次平台健康检查：
 
 ```powershell
-& "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action health -NoScreen
+& $AppCli cli health --no-screen
 ```
 
 macOS 使用：
 
 ```bash
-bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" health
+APP_CLI="$(bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path)"
+"$APP_CLI" cli health
 ```
 
 直接读取命令返回的结构化结论，不要求用户打开报告文件。只有需要留存诊断证据时才另存报告。
@@ -111,31 +141,6 @@ bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" health
 - 小助手根据已经确认的状态执行鼠标、键盘、剪贴板和结果保存操作。
 
 坐标精确不代表目标判断一定正确。本地识别也不等同于能够理解任意人物或物体。能力未列出、条件不足或尚未验证时，明确说明“当前未确认”，先做只读检查，不得猜测坐标。
-
-## 向小助手开发者反馈改进建议
-
-使用 CLI 或小助手完成任务时，如果确认底座存在命令行体验差、行为反直觉、报错不友好，
-或者必要能力缺失且难以使用，不要为了完成眼前任务而默默绕过。先在不扩大用户授权的前提下
-完成能够安全继续的部分，同时把问题整理为可供小助手开发者处理的改进建议。
-
-按两层处理：
-
-- 能通过本 Skill 说明清楚的调用约定、适用条件或常见踩坑，在当前任务明确包含 Skill 维护且
-  文档可编辑时补入 `SKILL.md` 或对应参考文档；普通使用任务中只记录待补充内容，不擅自修改
-  已安装的 Skill。
-- 需要修改小助手底座、CLI 或二进制才能解决的问题，整理为“现象、影响、建议”三部分。
-  现象写明触发命令或场景、预期行为、实际行为和原始报错；影响说明阻塞了什么任务、涉及哪些
-  平台或用户；建议描述期望的交互、返回信息或能力，不把未经验证的实现猜测写成结论。
-
-反馈与当前任务结果一起交给用户确认。未经用户明确同意，不代替用户创建 Issue、提交工单、
-发送邮件、发布消息或以其他方式外发；临时绕行方案也必须标明是绕行，不得把它描述为底座已经修复。
-
-用户明确同意“打开并填写反馈”后，可以通过小助手打开
-`https://www.xiaozs.com/sah/help-center.htm#feedback`，把已经确认的反馈内容填写到帮助中心的
-“反馈建议”表单。填写完成后必须停在提交前，让用户看到全部内容并自行修改、完善和点击
-“提交反馈”。不得直接请求表单接收地址，不得使用后台 HTTP 请求代替可见填写，也不得替用户
-点击提交按钮。称呼和手机号只在用户主动提供并同意填写时录入；不得从账号资料、历史记录或
-其他页面推测、复制联系方式。联系授权勾选框由用户自行决定和勾选，Agent 不代为确认。
 
 ## 面向用户的表达
 
@@ -158,32 +163,34 @@ bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" health
 > 连接器能力假定为 Mac 能力。
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action target
-.\scripts\workflow_dev.ps1 -Action task-begin -Handle <已确认窗口句柄>
-.\scripts\workflow_dev.ps1 -Action task-observe
+$AppCli = & .\scripts\workflow_dev.ps1 -Action cli-path
+& $AppCli cli window wait-selection --timeout 30
+& $AppCli cli task begin --handle <已确认窗口句柄>
+& $AppCli cli task observe
 ```
 
 macOS 对应命令为：
 
 ```bash
-bash ./scripts/workflow_dev.sh target --timeout 30
-bash ./scripts/workflow_dev.sh task-begin --handle <已确认窗口句柄>
-bash ./scripts/workflow_dev.sh task-observe
+APP_CLI="$(bash ./scripts/workflow_dev.sh cli-path)"
+"$APP_CLI" cli window wait-selection --timeout 30
+"$APP_CLI" cli task begin --handle <已确认窗口句柄>
+"$APP_CLI" cli task observe
 ```
 
 按需要使用 `task-find`、`task-wait`、`task-click`、`task-long-press`、`task-drag`、`task-scroll`、`task-write` 和 `task-hotkey`。滚动命令和方向语义见前面的“鼠标滚动能力速查”。每次改变界面后重新观察或等待明确状态，形成“观察—操作—验证”闭环。完成或放弃任务时执行：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action task-end
+& $AppCli cli task end
 ```
 
-macOS 使用 `bash ./scripts/workflow_dev.sh task-end`。
+macOS 使用 `"$APP_CLI" cli task end`。
 
 目标窗口被移动、遮挡或最小化时，先读取实时状态并安全恢复：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action task-refresh
-.\scripts\workflow_dev.ps1 -Action task-ensure-visible
+& $AppCli cli window refresh
+& $AppCli cli window ensure-visible
 ```
 
 需要在目标窗口输入，或需要读取目标窗口完整画面（例如 OCR/观察要看到整
@@ -201,6 +208,20 @@ macOS 使用 `bash ./scripts/workflow_dev.sh task-end`。
 
 一次任务反复出现、步骤趋于稳定，或用户明确要求重复、批量、定时执行时，再建议转为自动化流程。
 
+### 任务完成后的流程机会复盘
+
+每次通过小助手完成任务并确认结果后，回顾本次对话和操作记录。出现以下任一信号时，主动但简短地
+询问用户是否要把它沉淀为可安装的屏幕自动化流程：
+
+- 同一任务包含两个或更多前后依赖的界面步骤；
+- 用户在当前或近期对话中重复执行了相同目标、相同步骤，或明确表示以后还会做；
+- 已为完成任务反复定位、滚动、输入、点击或处理相同的正常/异常分支。
+
+说明可带来的收益（下次可稳定复用、可验证、可停止），并先问“要不要把这次步骤设计成流程，安装到
+小助手中供下次使用？”；不要直接创建、安装或运行流程。一次性临时查看、步骤尚不稳定、目标页面
+变化频繁、涉及敏感授权，或用户已经拒绝时，不重复推销。用户同意后，再按本 Skill 的流程开发与受监督
+验收规则进行设计、安装和首次运行。
+
 ## 执行前确认
 
 在任何会改变界面的操作前，集中确认：
@@ -213,8 +234,8 @@ macOS 使用 `bash ./scripts/workflow_dev.sh task-end`。
 
 ## 自动化流程工程
 
-macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`，且以 `capabilities` 返回的能力
-为准；任务级鼠标键盘动作按同一 CLI 契约调用，不把 Windows 连接器能力假定为 macOS 能力。
+macOS 下同一开发流水线成立。桌面动作以原生 CLI 的 `capabilities` 返回为准；流程管理桥接仅在
+  `workflow_dev.sh` 明确支持时使用，不把 Windows 连接器能力假定为 Mac 能力。
 
 ### WorkBuddy 必须执行的开发流水线
 
@@ -268,29 +289,29 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 先确认任务目标、完成结果和禁止内容，再创建采集任务：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action experience-create -Name "任务名称" -Goal "工作目标" -ExpectedResult "完成标准" -Forbidden "禁止动作"
+& $AppCli cli experience create --name "任务名称" --goal "工作目标" --expected-result "完成标准" --forbidden "禁止动作"
 ```
 
 保存返回的项目标识。每次示范前说明：会记录窗口、点击、滚动、快捷键和画面变化；不保存
 键入正文、密码和剪贴板正文。取得用户明确同意后，为当前缺失的经验启动一个片段：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action demonstrate-start -Project <项目标识> -FragmentType normal -Purpose "演示最小完整正常案例"
+& $AppCli cli recording start --project <项目标识> --fragment-type normal --purpose "演示最小完整正常案例"
 ```
 
 用户表示完成后立即停止。结束状态返回示范目录，片段会自动归入项目：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action demonstrate-stop
-.\scripts\workflow_dev.ps1 -Action demonstrate-status
-.\scripts\workflow_dev.ps1 -Action experience-show -Project <项目标识>
+& $AppCli cli recording stop
+& $AppCli cli recording status
+& $AppCli cli experience show <项目标识>
 ```
 
 需要时使用 `demonstrate-pause` 和 `demonstrate-resume`。根据 `missing_experience` 继续提问或采集
 `exception`、`boundary`、`supplement` 片段。把用户口述的判断规则写入项目：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action experience-note -Project <项目标识> -Kind success -Message "成功判断依据"
+& $AppCli cli experience note <项目标识> --kind success --message "成功判断依据"
 ```
 
 最终结合所有片段和说明，整理为“触发条件—输入—步骤—判断规则—异常处理—结果”。发现片段
@@ -306,7 +327,8 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 发出提示后立即运行，不要等待用户回复：
 
 ```powershell
-& "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action target
+$AppCli = & "<当前 Skill 安装目录>\scripts\workflow_dev.ps1" -Action cli-path
+& $AppCli cli window wait-selection --timeout 30
 ```
 
 该动作分析屏幕上实际可见的窗口区域，自动排除 Agent 对话窗口和小助手自身。只有一个候选时自动确认；存在多个候选时，同时显示带编号的虚线框，最多显示 10 秒。提示层不接管鼠标和键盘，用户仍可正常操作电脑。若期间某个候选窗口成为前台窗口，则使用返回的 `client_region`；否则根据候选列表继续确认，不得猜测目标。
@@ -352,6 +374,8 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 - 每个屏幕动作步骤逐项写明 `在`、`观察`、`动作`、`验证`、`成功` 和 `失败`，正文就是
   用户在“流程详情 → 流程”中阅读、点击“编辑流程源码”后修改的真实执行顺序；
 - 只声明最低必要权限；
+- 浏览器增强步骤继续由 `engine` 执行；只有受管浏览器的结构读取或操作确实能提高可靠性时才使用，
+  并在缺少组件、目标浏览器或所需权限时停止并说明前置条件；
 - 坐标统一使用当前操作区域相对坐标：点使用 `POINT(x=,y=)`，区域使用
   `RECT(left=,top=,right=,bottom=)`；数字语义、`ROW_Y`、`PERCENT_RECT` 等必须按
   `references/workflow-standard.md` 的统一类型写，不要在正文保存屏幕绝对坐标或裸 `[]` 数字；
@@ -376,7 +400,7 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 流程安装、升级或修复完成后，以及首次真实运行前，执行：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action health -Target <流程标识>
+& $AppCli cli health --workflow <流程标识>
 ```
 
 同一会话中环境、流程和目标窗口均未变化时不重复检查。结论为 `warning` 或 `failed` 时，
@@ -398,16 +422,17 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 
 ## 流程生命周期
 
-以下示例为 Windows 命令；macOS 对应动作用
-`bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" <动作>`，不存在的动作以脚本输出为准。
+以下示例使用原生 CLI；`workflow_dev.ps1` 与 `workflow_dev.sh` 仅在定位 App 或 `prepare-update` 等
+明确存在的桥接动作时使用。
 
 查看真实安装状态：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action status
-.\scripts\workflow_dev.ps1 -Action list
-.\scripts\workflow_dev.ps1 -Action show -Target <流程标识>
-.\scripts\workflow_dev.ps1 -Action health -Target <流程标识>
+$AppCli = & .\scripts\workflow_dev.ps1 -Action cli-path
+& $AppCli cli status
+& $AppCli cli workflow list
+& $AppCli cli workflow show <流程标识>
+& $AppCli cli health --workflow <流程标识>
 ```
 
 修改现有流程前创建独立开发副本：
@@ -419,16 +444,16 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 只修改命令返回的 `development_path`。完成后提升语义化版本，检查并安装：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action inspect -Target <开发副本目录>
-.\scripts\workflow_dev.ps1 -Action install -Target <开发副本目录>
+& $AppCli cli workflow inspect <开发副本目录>
+& $AppCli cli workflow install <开发副本目录>
 ```
 
 运行、停止和读取最近结果：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action start -Target <流程标识>
-.\scripts\workflow_dev.ps1 -Action stop
-.\scripts\workflow_dev.ps1 -Action latest -Limit 10
+& $AppCli cli start-workflow <流程标识>
+& $AppCli cli stop
+& $AppCli cli latest --limit 10
 ```
 
 需要限制处理数量时使用 `-Count <数量>`。启动后不要阻塞等待。
@@ -436,7 +461,7 @@ macOS 下同一开发流水线成立，但脚本一律使用 `workflow_dev.sh`�
 卸载前展示名称、版本和标识，说明历史结果与版本备份不会一并删除；取得用户明确确认后执行：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action remove -Target <流程标识>
+& $AppCli cli workflow remove <流程标识>
 ```
 
 不得直接修改已安装目录中的实现文件，也不得静默覆盖现有版本。

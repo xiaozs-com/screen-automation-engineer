@@ -55,6 +55,9 @@ run_cli() {
 }
 
 case "$ACTION" in
+    cli-path)
+        printf '%s\n' "$APP_CLI"
+        ;;
     status)
         run_bridge status
         ;;

@@ -1,7 +1,10 @@
 # 自动化流程开发标准（流程语言 v2）
 
 本文是“屏幕自动化工程师”创建、修改和修复流程时必须遵守的当前标准。实际平台能力仍以
-`workflow_dev.ps1 -Action capabilities` 返回值为准。
+`cli capabilities` 返回值为准。
+
+Windows 先执行 `$AppCli = & .\scripts\workflow_dev.ps1 -Action cli-path`，macOS 先执行
+`APP_CLI="$(bash ./scripts/workflow_dev.sh cli-path)"`；后续示例中的 CLI 命令均调用该原生路径。
 
 ## 新流程包
 
@@ -45,6 +48,7 @@ my-workflow/
 - 用途：一句话说明结果
 - 目标系统：Windows、macOS
 - 权限：读取屏幕、点击屏幕
+- 引擎能力：browser-enhancement@1  # 仅使用浏览器增强时声明
 - 创建者：WorkBuddy
 
 ## 参数
@@ -117,6 +121,8 @@ my-workflow/
 操作区域【名称】未出现文字【文字】
 识别全部文字
 操作区域【名称】可见
+浏览器出现元素【selector】
+浏览器未出现元素【selector】
 ```
 
 动作：
@@ -139,6 +145,16 @@ my-workflow/
 等待 DURATION(2s)
 填写表单：字段标签=值、字段标签=值
 执行交互模板【名称】
+打开浏览器会话【Chrome】 / 打开浏览器会话【Edge】
+关闭浏览器会话
+浏览器导航【URL】
+浏览器定位【selector】 / 浏览器定位【selector】包含文字【文字】
+浏览器读取变量【对象变量】字段【text、role】
+浏览器点击变量【对象变量】
+浏览器填写变量【对象变量】为【文字】
+浏览器下载变量【对象变量】文件名【文件名】
+浏览器滚动【x,y】
+浏览器按键【Escape】
 ```
 
 时长与滚动也可写裸值：`长按 点【名称】，持续 1.2s`、`从 点【起点】 拖到 点【名称】，持续 0.5s`、
@@ -146,6 +162,26 @@ my-workflow/
 
 一个步骤只放一个动作。改变外部状态的动作必须同时有观察和验证。文字定位不唯一、不确定或
 验证失败时不得盲点。
+
+### 浏览器增强
+
+浏览器增强是应用增强，不是执行者。步骤仍由 `engine` 执行，流程必须声明
+`引擎能力：browser-enhancement@1`。Windows 可写 Chrome 或 Edge；macOS 当前只可写 Chrome。
+每个流程打开独立受管会话，并在结束或失败清理时关闭；不得把用户日常浏览器 Profile 当作操作对象。
+
+典型顺序是：打开会话 → 导航 → 定位并保存对象变量 → 读取或操作对象 → 验证可见结果 → 关闭会话。
+定位要求唯一目标；零个或多个匹配都必须停止或进入有界恢复。下载只能保存到本次运行的受管下载
+目录，流程不能指定任意系统目录。浏览器对象只在创建它的当前会话有效，不得跨会话复用。
+
+程序扩展需要浏览器原子能力时，只能调用当前 SDK 的 `ctx.browser`：`open`、`navigate`、`locate`、
+`find`、`read`、`click`、`fill`、`scroll`、`press`、`download`、`verify` 和 `close`。调用方法必须与
+声明权限一致；所有改变页面的调用仍放入 `ctx.step.perform()` 或受监督的 `ctx.debug.step()`，
+并在 `finally` 或流程清理阶段关闭本流程打开的会话。不得直接导入 Playwright、浏览器驱动或网络库。
+
+会改变页面状态的导航、点击、填写、下载、滚动和按键仍需操作前观察与操作后验证。结构化 DOM
+结果可以参与定位和读取，但隐藏元素不能伪装成当前可见屏幕对象；关键结果优先用重新定位、重新读取
+或屏幕证据交叉验证。组件缺失、浏览器缺失、会话失效或前台验证受系统限制时明确停止，不退化为
+猜坐标或普通 Profile 操作。
 
 ### 填写表单与运行期锚定
 
@@ -297,7 +333,7 @@ OCR 锚定。横向越界、锚点消失或仍然越界都会安全停止。不�
 def run(ctx):
     rule = ctx.manifest["flow"]["task_rules"]["规则名称"]
     ctx.stop.check()
-    # 只通过 ctx.ocr、ctx.screen、ctx.geometry、ctx.window、ctx.mouse 等公共能力工作
+    # 只通过 ctx.ocr、ctx.screen、ctx.geometry、ctx.window、ctx.mouse、ctx.browser 等公共能力工作
     yield {"result": "可序列化结果"}
 ```
 
@@ -333,7 +369,9 @@ def run(ctx):
 ## 权限
 
 登记名称：读取屏幕、点击屏幕/操作鼠标、操作键盘、读取剪贴板、写入剪贴板、读取文件、
-保存结果/写入文件、控制应用。只声明最低权限，但不能少于真实动作需要的权限。
+保存结果/写入文件、控制应用、读取浏览器、操作浏览器、浏览器下载、管理浏览器会话。
+只声明最低权限，但不能少于真实动作需要的权限；任何浏览器权限都必须同时声明
+`browser-enhancement@1`。
 
 ## 开发和验收
 
@@ -349,8 +387,8 @@ def run(ctx):
 开发副本完成后依次运行：
 
 ```powershell
-.\scripts\workflow_dev.ps1 -Action inspect -Target <流程包目录>
-.\scripts\workflow_dev.ps1 -Action validate -Target <流程包目录>
+& $AppCli cli workflow inspect <流程包目录>
+& $AppCli cli workflow validate <流程包目录>
 ```
 
 校验会检查：

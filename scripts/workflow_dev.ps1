@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("status", "capabilities", "health", "connectors", "android-devices", "runs", "pause-run", "resume-run", "stop-run", "target", "task-begin", "task-status", "task-refresh", "task-restore", "task-activate", "task-ensure-visible", "task-move", "task-resize", "window-arrange", "task-observe", "task-find", "task-wait", "task-click", "task-long-press", "task-drag", "task-scroll", "task-write", "task-hotkey", "task-end", "list", "show", "prepare-update", "inspect", "validate", "install", "remove", "start", "latest", "debug", "next", "stop", "experience-create", "experience-list", "experience-show", "experience-note", "demonstrate-start", "demonstrate-status", "demonstrate-pause", "demonstrate-resume", "demonstrate-stop", "demonstrate-export")]
+    [ValidateSet("cli-path", "status", "capabilities", "health", "connectors", "android-devices", "runs", "pause-run", "resume-run", "stop-run", "target", "task-begin", "task-status", "task-refresh", "task-restore", "task-activate", "task-ensure-visible", "task-move", "task-resize", "window-arrange", "task-observe", "task-find", "task-wait", "task-click", "task-long-press", "task-drag", "task-scroll", "task-write", "task-hotkey", "task-end", "list", "show", "prepare-update", "inspect", "validate", "install", "remove", "start", "latest", "debug", "next", "stop", "experience-create", "experience-list", "experience-show", "experience-note", "demonstrate-start", "demonstrate-status", "demonstrate-pause", "demonstrate-resume", "demonstrate-stop", "demonstrate-export")]
     [string]$Action,
     [string]$Target,
     [string]$Executable,
@@ -123,7 +123,9 @@ function Require-Target {
 
 $resolvedExecutable = Resolve-HelperExecutable -RequestedPath $Executable
 
+# 仅 cli-path 与 prepare-update 是当前 Skill 的规范入口；其余 Action 为兼容已安装的旧流程保留。
 switch ($Action) {
+    "cli-path" { $resolvedExecutable }
     "status" {
         $desktopStatus = (& $resolvedExecutable cli status | Out-String | ConvertFrom-Json)
         [ordered]@{
