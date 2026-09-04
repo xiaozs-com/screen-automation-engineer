@@ -1,6 +1,6 @@
 ---
 name: screen-automation-engineer
-version: 1.1.17
+version: 1.1.18
 display_name: 屏幕自动化工程师
 display_name_en: Screen Automation Engineer
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
@@ -8,7 +8,7 @@ description_zh: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视
 description_en: Enhances an agent with local screen control and visual recognition, and supports creating and maintaining automation workflows with Screen Automation Helper on Windows and macOS.
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.17
+  version: 1.1.18
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
@@ -129,6 +129,12 @@ APP_CLI="$(bash "<当前 Skill 安装目录>/scripts/workflow_dev.sh" cli-path)"
 发布、安装和连接验证前，真实 DSH Provider 仍会拒绝启用整组屏幕插件工具。遇到“任务级工具限制”
 错误时，不能通过改提示词、环境变量或手工打开插件绕过。由某 Provider 启动的流程再次触发同一 Provider checkpoint 时会以
 `recursive_agent_call` 阻断；不得自动重试形成递归。
+
+小助手反向分派 checkpoint 时，Provider 可能是 WorkBuddy、DSH 或小助手官方智能服务；这与当前
+Agent 主动调用小助手 CLI 是两个方向。必须以平台返回的 Provider、版本、授权和能力探测结果为准，
+不能因为用户安装了本 Skill 就声称 WorkBuddy 一定支持被小助手调用。外部 Agent 不可调用、未授权
+或离线时，应说明当前原因和仍可使用的本地能力；只有平台明确报告官方智能可用时，才能建议切换，
+不得把专业版权益限制描述成技术故障。
 
 首次连接、桌面端更新后或诊断异常时，执行一次平台健康检查：
 
