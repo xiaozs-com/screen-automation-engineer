@@ -1,6 +1,6 @@
 ---
 name: screen-automation-engineer
-version: 1.1.18
+version: 1.1.19
 display_name: 屏幕自动化工程师
 display_name_en: Screen Automation Engineer
 description: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视觉技术提高界面识别与定位效率，并通过自然语言创建和维护自动化流程。配合支持 Windows 与 macOS 的“屏幕自动化小助手”完成流程的安装、升级、修复、卸载、运行和结果读取。
@@ -8,7 +8,7 @@ description_zh: 增强 Agent 的本地屏幕控制能力，利用本地屏幕视
 description_en: Enhances an agent with local screen control and visual recognition, and supports creating and maintaining automation workflows with Screen Automation Helper on Windows and macOS.
 metadata:
   slug: screen-automation-engineer
-  version: 1.1.18
+  version: 1.1.19
   displayName: 屏幕自动化工程师
   summary: 增强 Agent 本地屏幕控制能力，通过自然语言创建和维护自动化流程
   homepage: https://www.xiaozs.com/sah/
@@ -135,6 +135,11 @@ Agent 主动调用小助手 CLI 是两个方向。必须以平台返回的 Provi
 不能因为用户安装了本 Skill 就声称 WorkBuddy 一定支持被小助手调用。外部 Agent 不可调用、未授权
 或离线时，应说明当前原因和仍可使用的本地能力；只有平台明确报告官方智能可用时，才能建议切换，
 不得把专业版权益限制描述成技术故障。
+
+Windows 桌面端可在“设置 → Agent 接入…”中启用自动分派、选择 Provider、设置超时并测试连接。
+启用后，工作流进入 Agent 步骤会由后台 Bridge 自动领取、分派和回填；不要再指导普通用户手工运行
+`agent-claim` / `agent-complete`。测试连接成功只证明 Provider 可用，仍须运行一个只读 checkpoint
+确认原流程能够恢复。DSH 应优先使用已安装命令或现有 npx 缓存；首次联网临时安装不是稳定运行方式。
 
 首次连接、桌面端更新后或诊断异常时，执行一次平台健康检查：
 
